@@ -65,11 +65,18 @@ def convert_rubles_to_kopecks(rubles_str):
 # Функция извлечения item_id из URL
 # ---------------------------
 def extract_item_id(link: str) -> str:
-    match = re.search(r'(\d+)$', link)
+    """
+    Извлекает item_id из URL объявления.
+    Например, для URL:
+    https://www.avito.ru/moskva/oborudovanie_dlya_biznesa/dizelnyy_generator_100_kvt_v_shumozaschitnom_kozhuhe_4643419676?context=...
+    функция вернет "4643419676"
+    """
+    parsed = urlparse(link)
+    path = parsed.path  # Получаем путь без query-параметров
+    match = re.search(r'(\d+)$', path)
     if match:
         return match.group(1)
     return None
-
 # ---------------------------
 # HTML шаблоны
 # ---------------------------
@@ -310,6 +317,8 @@ def add_ad(account_id):
         upper_range = int(request.form["upper_range"])
         bid_step = convert_rubles_to_kopecks(request.form["bid_step"])
         current_bid = convert_rubles_to_kopecks(request.form["current_bid"])
+        # Автоматически извлекаем item_id из ad_link
+        real_item_id = extract_item_id(ad_link)
         ad = {
             "id": next_ad_id,
             "ad_link": ad_link,
@@ -317,11 +326,11 @@ def add_ad(account_id):
             "position_range": {"lower": lower_range, "upper": upper_range},
             "bid_step": bid_step,
             "current_bid": current_bid,
-            "item_id": None
+            "item_id": real_item_id
         }
         next_ad_id += 1
         account["ads"].append(ad)
-        logger.info("Добавлено объявление ID %s для аккаунта ID %s", ad["id"], account["id"])
+        logger.info("Добавлено объявление ID %s для аккаунта ID %s, real_item_id: %s", ad["id"], account["id"], real_item_id)
         check_position_and_update()
         return redirect(url_for("account_detail", account_id=account["id"]))
 
